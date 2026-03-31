@@ -216,6 +216,7 @@ def _stream_mp3(url: str) -> Generator[bytes, None, None]:
         "pipe:1",
     ]
 
+    ytdlp_proc = None
     try:
         ytdlp_proc = subprocess.Popen(
             ytdlp_cmd,
@@ -229,6 +230,8 @@ def _stream_mp3(url: str) -> Generator[bytes, None, None]:
             stderr=subprocess.DEVNULL,
         )
     except FileNotFoundError as e:
+        if ytdlp_proc is not None:
+            _cleanup_process(ytdlp_proc)
         raise YouTubeError("yt-dlp or ffmpeg is not installed or not in PATH.") from e
 
     # Allow ytdlp_proc to receive SIGPIPE if ffmpeg exits
