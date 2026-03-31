@@ -10,6 +10,7 @@ import {
   createFormatPicker,
   type FormatSelection,
 } from "./components/format-picker";
+import { createPlaylistView } from "./components/playlist-view";
 import { createUrlInput, setUrlInputLoading } from "./components/url-input";
 import { createVideoInfo } from "./components/video-info";
 import "./styles/main.css";
@@ -57,14 +58,16 @@ async function handleUrlSubmit(url: string): Promise<void> {
     if (isVideoInfo(info)) {
       renderVideoFlow(info, url, infoSection, formatSection, downloadSection);
     } else if (isPlaylistInfo(info)) {
-      infoSection.innerHTML = `
-        <div class="w-full max-w-2xl bg-white rounded-lg shadow p-4">
-          <h2 class="text-lg font-semibold text-gray-900">${escapeHtml(info.title)}</h2>
-          <p class="text-sm text-gray-600 mt-1">${escapeHtml(info.uploader)}</p>
-          <p class="text-sm text-gray-500 mt-1">${info.video_count} videos</p>
-          <p class="text-sm text-gray-400 mt-2">Playlist support coming soon.</p>
-        </div>
-      `;
+      const formatPicker = createFormatPicker((selection) => {
+        currentSelection = selection;
+      });
+      formatSection.appendChild(formatPicker);
+
+      const playlistView = createPlaylistView(
+        info,
+        () => currentSelection,
+      );
+      infoSection.appendChild(playlistView);
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : "An error occurred";
