@@ -7,10 +7,9 @@ import pytest
 from app.services.youtube import (
     InvalidURLError,
     VideoNotFoundError,
-    YouTubeError,
+    build_download_filename,
     extract_playlist_info,
     extract_video_info,
-    get_download_filename,
     validate_youtube_url,
 )
 
@@ -179,29 +178,25 @@ class TestExtractPlaylistInfo:
         assert result.video_count == 1
 
 
-class TestGetDownloadFilename:
-    @patch("app.services.youtube.extract_video_info")
-    def test_returns_sanitized_filename(self, mock_extract: MagicMock) -> None:
-        mock_extract.return_value = MagicMock(title='Test: "Video" Title')
-
-        result = get_download_filename("https://www.youtube.com/watch?v=test", "mp4")
+class TestBuildDownloadFilename:
+    def test_returns_sanitized_filename(self) -> None:
+        result = build_download_filename('Test: "Video" Title', "mp4")
 
         assert result == "Test_ _Video_ Title.mp4"
         assert '"' not in result
         assert ":" not in result
 
-    @patch("app.services.youtube.extract_video_info")
-    def test_returns_mp3_extension_for_audio(self, mock_extract: MagicMock) -> None:
-        mock_extract.return_value = MagicMock(title="Audio Track")
-
-        result = get_download_filename("https://www.youtube.com/watch?v=test", "mp3")
+    def test_returns_mp3_extension_for_audio(self) -> None:
+        result = build_download_filename("Audio Track", "mp3")
 
         assert result.endswith(".mp3")
 
-    @patch("app.services.youtube.extract_video_info")
-    def test_fallback_filename_on_error(self, mock_extract: MagicMock) -> None:
-        mock_extract.side_effect = YouTubeError("fail")
+    def test_fallback_filename_when_title_is_none(self) -> None:
+        result = build_download_filename(None, "mp4")
 
-        result = get_download_filename("https://www.youtube.com/watch?v=test", "mp4")
+        assert result == "download.mp4"
+
+    def test_fallback_filename_when_title_is_empty(self) -> None:
+        result = build_download_filename("", "mp4")
 
         assert result == "download.mp4"

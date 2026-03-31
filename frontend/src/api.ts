@@ -80,8 +80,12 @@ export function buildDownloadUrl(
   url: string,
   fmt: "mp4" | "mp3" = "mp4",
   quality: string = "best",
+  title?: string,
 ): string {
   const params = new URLSearchParams({ url, fmt, quality });
+  if (title) {
+    params.set("title", title);
+  }
   return `${API_BASE}/download?${params}`;
 }
 
