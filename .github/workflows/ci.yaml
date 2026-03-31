@@ -1,0 +1,25 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install mise
+        uses: jdx/mise-action@v2
+      - name: Install backend dependencies
+        run: pip install -e "backend[dev]"
+      - name: Install frontend dependencies
+        run: cd frontend && npm ci
+      - name: Install pre-commit
+        run: pip install pre-commit
+      - name: Run pre-commit checks
+        run: python -m pre_commit run --all-files
+      - name: Run backend tests
+        run: cd backend && python -m pytest tests/ -v
+      - name: Build frontend
+        run: cd frontend && npm run build
