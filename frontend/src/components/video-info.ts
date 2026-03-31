@@ -3,6 +3,7 @@
  */
 
 import { formatDuration, type VideoInfo } from "../api";
+import { escapeHtml } from "../utils";
 
 export function createVideoInfo(info: VideoInfo): HTMLElement {
   const container = document.createElement("div");
@@ -28,10 +29,4 @@ export function createVideoInfo(info: VideoInfo): HTMLElement {
   `;
 
   return container;
-}
-
-function escapeHtml(text: string): string {
-  const div = document.createElement("div");
-  div.textContent = text;
-  return div.innerHTML;
 }
