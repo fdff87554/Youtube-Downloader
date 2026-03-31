@@ -7,6 +7,7 @@ import {
   formatDuration,
   type PlaylistInfo,
 } from "../api";
+import { escapeHtml } from "../utils";
 
 export function createPlaylistView(
   info: PlaylistInfo,
@@ -67,10 +68,4 @@ export function createPlaylistView(
 
   container.appendChild(list);
   return container;
-}
-
-function escapeHtml(text: string): string {
-  const div = document.createElement("div");
-  div.textContent = text;
-  return div.innerHTML;
 }

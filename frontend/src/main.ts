@@ -14,6 +14,7 @@ import { createPlaylistView } from "./components/playlist-view";
 import { createUrlInput, setUrlInputLoading } from "./components/url-input";
 import { createVideoInfo } from "./components/video-info";
 import "./styles/main.css";
+import { escapeHtml } from "./utils";
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
 
@@ -105,12 +106,6 @@ function renderVideoFlow(
     window.open(downloadUrl, "_blank");
   });
   downloadSection.appendChild(downloadBtn);
-}
-
-function escapeHtml(text: string): string {
-  const div = document.createElement("div");
-  div.textContent = text;
-  return div.innerHTML;
 }
 
 render();

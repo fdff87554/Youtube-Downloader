@@ -5,6 +5,7 @@ from urllib.parse import urlparse
 from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 
+from app.routers.shared import error_response
 from app.schemas.video import ErrorEnvelope, PlaylistInfo, VideoFormat, VideoInfo
 from app.services.youtube import (
     InvalidURLError,
@@ -42,11 +43,11 @@ async def get_info(
             return extract_playlist_info(url)
         return extract_video_info(url)
     except InvalidURLError as e:
-        return _error_response(400, "invalid_url", str(e))
+        return error_response(400, "invalid_url", str(e))
     except VideoNotFoundError as e:
-        return _error_response(404, "not_found", str(e))
+        return error_response(404, "not_found", str(e))
     except YouTubeError as e:
-        return _error_response(500, "extraction_error", str(e))
+        return error_response(500, "extraction_error", str(e))
 
 
 @router.get(
@@ -73,11 +74,11 @@ async def get_formats(
         info = extract_video_info(url)
         return info.formats
     except InvalidURLError as e:
-        return _error_response(400, "invalid_url", str(e))
+        return error_response(400, "invalid_url", str(e))
     except VideoNotFoundError as e:
-        return _error_response(404, "not_found", str(e))
+        return error_response(404, "not_found", str(e))
     except YouTubeError as e:
-        return _error_response(500, "extraction_error", str(e))
+        return error_response(500, "extraction_error", str(e))
 
 
 def _is_playlist_url(url: str) -> bool:
@@ -89,10 +90,3 @@ def _is_playlist_url(url: str) -> bool:
     """
     parsed = urlparse(url)
     return parsed.path.rstrip("/").endswith("/playlist")
-
-
-def _error_response(status_code: int, code: str, message: str) -> JSONResponse:
-    return JSONResponse(
-        status_code=status_code,
-        content={"error": {"code": code, "message": message}},
-    )

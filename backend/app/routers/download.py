@@ -6,6 +6,7 @@ from urllib.parse import quote
 from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse, StreamingResponse
 
+from app.routers.shared import error_response
 from app.schemas.video import ErrorEnvelope
 from app.services.youtube import (
     InvalidURLError,
@@ -88,15 +89,8 @@ async def download_video(
             },
         )
     except InvalidURLError as e:
-        return _error_response(400, "invalid_url", str(e))
+        return error_response(400, "invalid_url", str(e))
     except VideoNotFoundError as e:
-        return _error_response(404, "not_found", str(e))
+        return error_response(404, "not_found", str(e))
     except YouTubeError as e:
-        return _error_response(500, "download_error", str(e))
-
-
-def _error_response(status_code: int, code: str, message: str) -> JSONResponse:
-    return JSONResponse(
-        status_code=status_code,
-        content={"error": {"code": code, "message": message}},
-    )
+        return error_response(500, "download_error", str(e))
