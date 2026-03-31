@@ -59,20 +59,24 @@ class TestPlaylistInfoEndpoint:
         assert response.status_code == 404
         assert response.json()["error"]["code"] == "not_found"
 
-    def test_url_with_list_param_detected_as_playlist(self, client) -> None:
-        """Verify that URLs with list= param are routed to playlist extraction."""
-        with patch("app.routers.info.extract_playlist_info") as mock:
-            mock.return_value = PlaylistInfo(
-                playlist_id="PL123",
+    def test_watch_url_with_list_param_treated_as_video(self, client) -> None:
+        """URLs like watch?v=abc&list=PLxxx should be treated as single videos."""
+        with patch("app.routers.info.extract_video_info") as mock_video:
+            from app.schemas.video import VideoInfo
+
+            mock_video.return_value = VideoInfo(
+                video_id="abc",
                 title="Test",
+                thumbnail="",
+                duration=60,
                 uploader="Test",
-                video_count=0,
-                entries=[],
+                formats=[],
             )
 
-            client.get(
+            response = client.get(
                 "/api/info",
                 params={"url": "https://www.youtube.com/watch?v=abc&list=PL123"},
             )
 
-            mock.assert_called_once()
+            assert response.status_code == 200
+            mock_video.assert_called_once()

@@ -1,9 +1,11 @@
 """API endpoints for video and playlist information."""
 
+from urllib.parse import urlparse
+
 from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 
-from app.schemas.video import ErrorEnvelope, PlaylistInfo, VideoInfo
+from app.schemas.video import ErrorEnvelope, PlaylistInfo, VideoFormat, VideoInfo
 from app.services.youtube import (
     InvalidURLError,
     VideoNotFoundError,
@@ -13,8 +15,6 @@ from app.services.youtube import (
 )
 
 router = APIRouter(prefix="/api", tags=["info"])
-
-_PLAYLIST_INDICATORS = ("list=", "/playlist")
 
 
 @router.get(
@@ -51,7 +51,7 @@ async def get_info(
 
 @router.get(
     "/formats",
-    response_model=list,
+    response_model=list[VideoFormat],
     responses={
         400: {"model": ErrorEnvelope},
         404: {"model": ErrorEnvelope},
@@ -81,7 +81,14 @@ async def get_formats(
 
 
 def _is_playlist_url(url: str) -> bool:
-    return any(indicator in url for indicator in _PLAYLIST_INDICATORS)
+    """Detect playlist URLs by path, not query parameters.
+
+    URLs like watch?v=abc&list=PLxxx are treated as single videos
+    since the user's intent is to download that specific video.
+    Only /playlist paths are treated as playlist requests.
+    """
+    parsed = urlparse(url)
+    return parsed.path.rstrip("/").endswith("/playlist")
 
 
 def _error_response(status_code: int, code: str, message: str) -> JSONResponse:
