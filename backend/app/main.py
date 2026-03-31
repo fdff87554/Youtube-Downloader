@@ -55,9 +55,11 @@ def _configure_exception_handlers(app: FastAPI) -> None:
 
 
 def _include_routers(app: FastAPI) -> None:
+    from app.routers.download import router as download_router
     from app.routers.info import router as info_router
 
     app.include_router(info_router)
+    app.include_router(download_router)
 
 
 app = create_app()
