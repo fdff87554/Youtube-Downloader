@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
 # Start uvicorn in background
@@ -8,5 +8,9 @@ uvicorn app.main:app \
 	--workers 1 \
 	--log-level warning &
 
-# Start nginx in foreground
-nginx -g "daemon off;"
+# Start nginx in background
+nginx -g "daemon off;" &
+
+# Exit container if either process dies
+wait -n
+exit 1

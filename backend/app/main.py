@@ -26,6 +26,7 @@ def create_app() -> FastAPI:
     _configure_cors(app)
     _configure_exception_handlers(app)
     _include_routers(app)
+    _add_health_check(app)
 
     return app
 
@@ -52,6 +53,12 @@ def _configure_exception_handlers(app: FastAPI) -> None:
             status_code=500,
             content={"error": {"code": "internal_error", "message": detail}},
         )
+
+
+def _add_health_check(app: FastAPI) -> None:
+    @app.get("/api/health", tags=["health"])
+    async def health() -> dict[str, str]:
+        return {"status": "ok"}
 
 
 def _include_routers(app: FastAPI) -> None:
