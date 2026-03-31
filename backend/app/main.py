@@ -25,6 +25,7 @@ def create_app() -> FastAPI:
 
     _configure_cors(app)
     _configure_exception_handlers(app)
+    _include_routers(app)
 
     return app
 
@@ -51,6 +52,12 @@ def _configure_exception_handlers(app: FastAPI) -> None:
             status_code=500,
             content={"error": {"code": "internal_error", "message": detail}},
         )
+
+
+def _include_routers(app: FastAPI) -> None:
+    from app.routers.info import router as info_router
+
+    app.include_router(info_router)
 
 
 app = create_app()
