@@ -131,7 +131,8 @@ def extract_playlist_info(url: str) -> PlaylistInfo:
             video_id=e.get("id", ""),
             title=e.get("title", "Unknown"),
             duration=e.get("duration") or 0,
-            thumbnail=e.get("thumbnail") or e.get("thumbnails", [{}])[0].get("url", ""),
+            thumbnail=e.get("thumbnail")
+            or (e.get("thumbnails") or [{}])[0].get("url", ""),
         )
         for e in raw_entries
         if e is not None
@@ -154,7 +155,9 @@ def stream_download(
     """Stream a video download as chunks without writing to disk.
 
     Uses yt-dlp subprocess to pipe output directly to the caller,
-    ensuring zero disk I/O on the server.
+    ensuring zero disk I/O on the server. For MP3, pipes yt-dlp
+    through ffmpeg for format conversion since yt-dlp skips
+    post-processors in stdout mode.
 
     Args:
         url: YouTube video URL.
@@ -170,92 +173,155 @@ def stream_download(
     """
     validate_youtube_url(url)
 
-    cmd = _build_download_command(url, format_type, quality)
-
-    try:
-        process = subprocess.Popen(  # noqa: S603
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-    except FileNotFoundError as e:
-        raise YouTubeError("yt-dlp is not installed or not in PATH.") from e
-
-    try:
-        assert process.stdout is not None  # noqa: S101
-        while True:
-            chunk = process.stdout.read(CHUNK_SIZE)
-            if not chunk:
-                break
-            yield chunk
-    finally:
-        process.stdout.close()
-        return_code = process.wait()
-
-    if return_code != 0:
-        stderr_msg = ""
-        if process.stderr:
-            stderr_msg = process.stderr.read().decode(errors="replace")
-            process.stderr.close()
-        raise YouTubeError(f"Download failed (exit {return_code}): {stderr_msg[:200]}")
-
-    if process.stderr:
-        process.stderr.close()
+    if format_type == "mp3":
+        yield from _stream_mp3(url)
+    else:
+        yield from _stream_video(url, quality)
 
 
-def get_download_filename(url: str, format_type: str = "mp4") -> str:
-    """Generate a filename for the download based on video title.
+def _stream_video(url: str, quality: str) -> Generator[bytes, None, None]:
+    cmd = _build_video_command(url, quality)
+    yield from _run_piped_process(cmd)
 
-    Args:
-        url: YouTube video URL.
-        format_type: Output format (mp4 or mp3).
 
-    Returns:
-        Sanitized filename with appropriate extension.
+def _stream_mp3(url: str) -> Generator[bytes, None, None]:
+    """Stream MP3 by piping yt-dlp audio through ffmpeg for conversion.
+
+    yt-dlp skips post-processors in stdout mode, so we pipe the raw
+    audio stream through ffmpeg to convert to MP3.
     """
-    try:
-        info = extract_video_info(url)
-        title = _sanitize_filename(info.title)
-    except YouTubeError:
-        title = "download"
-
-    ext = "mp3" if format_type == "mp3" else "mp4"
-    return f"{title}.{ext}"
-
-
-def _build_download_command(
-    url: str,
-    format_type: str,
-    quality: str,
-) -> list[str]:
-    format_spec = _resolve_format_spec(format_type, quality)
-
-    cmd = [
+    ytdlp_cmd = [
         "yt-dlp",
         "--no-playlist",
         "-f",
-        format_spec,
+        "bestaudio/best",
         "-o",
         "-",
         "--quiet",
         "--no-warnings",
         "--socket-timeout",
         str(SOCKET_TIMEOUT),
+        url,
+    ]
+    ffmpeg_cmd = [
+        "ffmpeg",
+        "-i",
+        "pipe:0",
+        "-f",
+        "mp3",
+        "-ab",
+        "192k",
+        "-v",
+        "quiet",
+        "pipe:1",
     ]
 
-    if format_type == "mp3":
-        cmd.extend(["--extract-audio", "--audio-format", "mp3"])
-    else:
-        cmd.extend(["--merge-output-format", "mp4"])
+    try:
+        ytdlp_proc = subprocess.Popen(
+            ytdlp_cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+        )
+        ffmpeg_proc = subprocess.Popen(
+            ffmpeg_cmd,
+            stdin=ytdlp_proc.stdout,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+        )
+    except FileNotFoundError as e:
+        raise YouTubeError("yt-dlp or ffmpeg is not installed or not in PATH.") from e
 
-    cmd.append(url)
-    return cmd
+    # Allow ytdlp_proc to receive SIGPIPE if ffmpeg exits
+    if ytdlp_proc.stdout:
+        ytdlp_proc.stdout.close()
+
+    try:
+        if ffmpeg_proc.stdout is None:
+            raise YouTubeError("Failed to open ffmpeg stdout pipe.")
+        while True:
+            chunk = ffmpeg_proc.stdout.read(CHUNK_SIZE)
+            if not chunk:
+                break
+            yield chunk
+    finally:
+        _cleanup_process(ffmpeg_proc)
+        _cleanup_process(ytdlp_proc)
 
 
-def _resolve_format_spec(format_type: str, quality: str) -> str:
-    if format_type == "mp3":
-        return "bestaudio/best"
+def _run_piped_process(
+    cmd: list[str],
+) -> Generator[bytes, None, None]:
+    try:
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+        )
+    except FileNotFoundError as e:
+        raise YouTubeError("yt-dlp is not installed or not in PATH.") from e
 
+    try:
+        if process.stdout is None:
+            raise YouTubeError("Failed to open stdout pipe.")
+        while True:
+            chunk = process.stdout.read(CHUNK_SIZE)
+            if not chunk:
+                break
+            yield chunk
+    finally:
+        _cleanup_process(process)
+
+
+def _cleanup_process(process: subprocess.Popen[bytes]) -> None:
+    """Terminate and clean up a subprocess."""
+    if process.poll() is None:
+        process.kill()
+    if process.stdout:
+        process.stdout.close()
+    if process.stderr:
+        process.stderr.close()
+    process.wait()
+
+
+def build_download_filename(
+    title: str | None,
+    format_type: str = "mp4",
+) -> str:
+    """Build a download filename from a video title.
+
+    Args:
+        title: Video title (already known by caller). Falls back to
+            "download" if None or empty.
+        format_type: Output format (mp4 or mp3).
+
+    Returns:
+        Sanitized filename with appropriate extension.
+    """
+    name = _sanitize_filename(title) if title else "download"
+    ext = "mp3" if format_type == "mp3" else "mp4"
+    return f"{name}.{ext}"
+
+
+def _build_video_command(url: str, quality: str) -> list[str]:
+    format_spec = _resolve_video_format(quality)
+    return [
+        "yt-dlp",
+        "--no-playlist",
+        "-f",
+        format_spec,
+        "-o",
+        "-",
+        "--merge-output-format",
+        "mp4",
+        "--quiet",
+        "--no-warnings",
+        "--socket-timeout",
+        str(SOCKET_TIMEOUT),
+        url,
+    ]
+
+
+def _resolve_video_format(quality: str) -> str:
     _v = "bestvideo[ext=mp4]"
     _a = "bestaudio[ext=m4a]"
     _fb = "best[ext=mp4]/best"

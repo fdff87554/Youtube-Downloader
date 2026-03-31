@@ -100,6 +100,7 @@ function renderVideoFlow(
       url,
       currentSelection.fmt,
       currentSelection.quality,
+      info.title,
     );
     window.open(downloadUrl, "_blank");
   });

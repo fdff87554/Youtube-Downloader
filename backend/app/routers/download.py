@@ -11,8 +11,9 @@ from app.services.youtube import (
     InvalidURLError,
     VideoNotFoundError,
     YouTubeError,
-    get_download_filename,
+    build_download_filename,
     stream_download,
+    validate_youtube_url,
 )
 
 router = APIRouter(prefix="/api", tags=["download"])
@@ -54,6 +55,7 @@ async def download_video(
     url: str = Query(..., description="YouTube video URL"),
     fmt: FormatType = FormatType.MP4,
     quality: Quality = Quality.BEST,
+    title: str | None = Query(None, description="Video title for filename"),
 ) -> StreamingResponse | JSONResponse:
     """Stream a YouTube video or audio download.
 
@@ -63,12 +65,14 @@ async def download_video(
         url: YouTube video URL.
         fmt: Output format (mp4 or mp3).
         quality: Video quality (best, 1080, 720, 480).
+        title: Optional video title for the download filename.
 
     Returns:
         StreamingResponse with the media content.
     """
     try:
-        filename = get_download_filename(url, fmt.value)
+        validate_youtube_url(url)
+        filename = build_download_filename(title, fmt.value)
         media_type = MEDIA_TYPES[fmt]
         encoded_filename = quote(filename)
 
