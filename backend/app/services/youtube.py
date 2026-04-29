@@ -227,34 +227,39 @@ def _stream_mp3(url: str) -> Generator[bytes, None, None]:
         "pipe:1",
     ]
 
-    ytdlp_proc = None
-    ytdlp_drainer = None
+    # Initialize everything up-front so the outer finally can always
+    # finalize whatever happens to be alive, regardless of where in the
+    # pipeline setup raised.
+    ytdlp_proc: subprocess.Popen[bytes] | None = None
+    ffmpeg_proc: subprocess.Popen[bytes] | None = None
+    ytdlp_drainer: threading.Thread | None = None
+    ffmpeg_drainer: threading.Thread | None = None
     try:
-        ytdlp_proc = subprocess.Popen(
-            ytdlp_cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        ffmpeg_proc = subprocess.Popen(
-            ffmpeg_cmd,
-            stdin=ytdlp_proc.stdout,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-    except FileNotFoundError as e:
-        if ytdlp_proc is not None:
-            _finalize_process("yt-dlp", ytdlp_proc, None)
-        raise YouTubeError("yt-dlp or ffmpeg is not installed or not in PATH.") from e
+        try:
+            ytdlp_proc = subprocess.Popen(
+                ytdlp_cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            ffmpeg_proc = subprocess.Popen(
+                ffmpeg_cmd,
+                stdin=ytdlp_proc.stdout,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+        except FileNotFoundError as e:
+            raise YouTubeError(
+                "yt-dlp or ffmpeg is not installed or not in PATH."
+            ) from e
 
-    # Close our handle on ytdlp's stdout so ffmpeg owns it; ytdlp will
-    # receive SIGPIPE if ffmpeg exits early.
-    if ytdlp_proc.stdout:
-        ytdlp_proc.stdout.close()
+        # Close our handle on ytdlp's stdout so ffmpeg owns it; ytdlp will
+        # receive SIGPIPE if ffmpeg exits early.
+        if ytdlp_proc.stdout:
+            ytdlp_proc.stdout.close()
 
-    ytdlp_drainer = _start_stderr_drainer("yt-dlp", ytdlp_proc)
-    ffmpeg_drainer = _start_stderr_drainer("ffmpeg", ffmpeg_proc)
+        ytdlp_drainer = _start_stderr_drainer("yt-dlp", ytdlp_proc)
+        ffmpeg_drainer = _start_stderr_drainer("ffmpeg", ffmpeg_proc)
 
-    try:
         if ffmpeg_proc.stdout is None:
             raise YouTubeError("Failed to open ffmpeg stdout pipe.")
         while True:
@@ -271,18 +276,20 @@ def _run_piped_process(
     cmd: list[str],
     name: str = "yt-dlp",
 ) -> Generator[bytes, None, None]:
+    process: subprocess.Popen[bytes] | None = None
+    drainer: threading.Thread | None = None
     try:
-        process = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-    except FileNotFoundError as e:
-        raise YouTubeError("yt-dlp is not installed or not in PATH.") from e
+        try:
+            process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+        except FileNotFoundError as e:
+            raise YouTubeError("yt-dlp is not installed or not in PATH.") from e
 
-    drainer = _start_stderr_drainer(name, process)
+        drainer = _start_stderr_drainer(name, process)
 
-    try:
         if process.stdout is None:
             raise YouTubeError("Failed to open stdout pipe.")
         while True:
@@ -323,10 +330,17 @@ def _start_stderr_drainer(
 
 def _finalize_process(
     name: str,
-    process: subprocess.Popen[bytes],
+    process: subprocess.Popen[bytes] | None,
     drainer: threading.Thread | None,
 ) -> None:
-    """Terminate, wait, join the stderr drainer, and log non-zero exits."""
+    """Terminate, wait, join the stderr drainer, and log non-zero exits.
+
+    Both arguments may be ``None`` so callers can always invoke this from
+    a ``finally`` block, even when the process or drainer never made it
+    past initialization.
+    """
+    if process is None:
+        return
     if process.poll() is None:
         process.kill()
     if process.stdout:
