@@ -179,3 +179,32 @@ class TestErrorMasking:
         assert response.status_code == 500
         body = response.json()
         assert "specific yt-dlp error 42" in body["error"]["message"]
+
+
+class TestRateLimit:
+    @patch("app.routers.info.extract_video_info")
+    def test_returns_429_after_info_limit_exceeded(
+        self, mock_extract: MagicMock, client
+    ) -> None:
+        mock_extract.return_value = VideoInfo(
+            video_id="test",
+            title="Test",
+            thumbnail="",
+            duration=10,
+            uploader="x",
+            formats=[],
+        )
+
+        # Limit is 30/minute. Drive past it from a single client.
+        last_response = None
+        for _ in range(31):
+            last_response = client.get(
+                "/api/info",
+                params={"url": "https://www.youtube.com/watch?v=test"},
+            )
+            if last_response.status_code == 429:
+                break
+
+        assert last_response is not None
+        assert last_response.status_code == 429
+        assert last_response.json()["error"]["code"] == "rate_limited"

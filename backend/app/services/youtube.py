@@ -29,6 +29,7 @@ YOUTUBE_URL_PATTERN = re.compile(
 SOCKET_TIMEOUT = 30
 CHUNK_SIZE = 65536
 STDERR_DRAIN_TIMEOUT = 2.0
+MAX_PLAYLIST_SIZE = 200
 
 
 class YouTubeError(Exception):
@@ -130,6 +131,11 @@ def extract_playlist_info(url: str) -> PlaylistInfo:
         raise VideoNotFoundError("Could not retrieve playlist information.")
 
     raw_entries = info.get("entries") or []
+    if len(raw_entries) > MAX_PLAYLIST_SIZE:
+        raise YouTubeError(
+            f"Playlist exceeds the {MAX_PLAYLIST_SIZE}-video limit "
+            f"(found {len(raw_entries)})."
+        )
     entries = [
         PlaylistEntry(
             video_id=e.get("id", ""),

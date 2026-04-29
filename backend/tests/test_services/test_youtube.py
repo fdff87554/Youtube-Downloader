@@ -117,6 +117,28 @@ class TestExtractVideoInfo:
 
 class TestExtractPlaylistInfo:
     @patch("app.services.youtube.yt_dlp.YoutubeDL")
+    def test_rejects_playlist_above_size_limit(self, mock_ydl_cls: MagicMock) -> None:
+        from app.services.youtube import MAX_PLAYLIST_SIZE, YouTubeError
+
+        mock_info = {
+            "id": "PLhuge",
+            "title": "Huge Playlist",
+            "uploader": "Creator",
+            "entries": [
+                {"id": f"v{i}", "title": f"Video {i}", "duration": 60, "thumbnail": ""}
+                for i in range(MAX_PLAYLIST_SIZE + 1)
+            ],
+        }
+        mock_ydl = MagicMock()
+        mock_ydl.extract_info.return_value = mock_info
+        mock_ydl.__enter__ = MagicMock(return_value=mock_ydl)
+        mock_ydl.__exit__ = MagicMock(return_value=False)
+        mock_ydl_cls.return_value = mock_ydl
+
+        with pytest.raises(YouTubeError, match=r"exceeds the .* limit"):
+            extract_playlist_info("https://www.youtube.com/playlist?list=PLhuge")
+
+    @patch("app.services.youtube.yt_dlp.YoutubeDL")
     def test_returns_playlist_with_entries(self, mock_ydl_cls: MagicMock) -> None:
         mock_info = {
             "id": "PLtest123",
