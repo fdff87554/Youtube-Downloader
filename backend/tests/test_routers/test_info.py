@@ -11,7 +11,7 @@ from app.schemas.video import VideoInfo
 
 class TestGetInfo:
     @patch("app.routers.info.extract_video_info")
-    def test_returns_video_info_for_valid_url(
+    def test_get_info_with_video_url_returns_video_metadata(
         self, mock_extract: MagicMock, client
     ) -> None:
         mock_extract.return_value = VideoInfo(
@@ -34,7 +34,9 @@ class TestGetInfo:
         assert data["title"] == "Test Video"
 
     @patch("app.routers.info.extract_video_info")
-    def test_returns_400_for_invalid_url(self, mock_extract: MagicMock, client) -> None:
+    def test_get_info_with_invalid_url_returns_400(
+        self, mock_extract: MagicMock, client
+    ) -> None:
         from app.services.youtube import InvalidURLError
 
         mock_extract.side_effect = InvalidURLError("URL must be a valid YouTube URL.")
@@ -49,7 +51,7 @@ class TestGetInfo:
         assert data["error"]["code"] == "invalid_url"
 
     @patch("app.routers.info.extract_video_info")
-    def test_returns_404_for_unavailable_video(
+    def test_get_info_with_unavailable_video_returns_404(
         self, mock_extract: MagicMock, client
     ) -> None:
         from app.services.youtube import VideoNotFoundError
@@ -65,7 +67,7 @@ class TestGetInfo:
         assert response.json()["error"]["code"] == "not_found"
 
     @patch("app.routers.info.extract_playlist_info")
-    def test_returns_playlist_info_for_playlist_url(
+    def test_get_info_with_playlist_url_returns_playlist_metadata(
         self, mock_extract: MagicMock, client
     ) -> None:
         from app.schemas.video import PlaylistInfo
