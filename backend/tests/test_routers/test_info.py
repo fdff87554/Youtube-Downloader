@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import create_app
-from app.schemas.video import VideoFormat, VideoInfo
+from app.schemas.video import VideoInfo
 
 
 class TestGetInfo:
@@ -86,51 +86,6 @@ class TestGetInfo:
         assert response.status_code == 200
         data = response.json()
         assert data["playlist_id"] == "PLtest"
-
-
-class TestGetFormats:
-    @patch("app.routers.info.extract_video_info")
-    def test_returns_format_list(self, mock_extract: MagicMock, client) -> None:
-        mock_extract.return_value = VideoInfo(
-            video_id="test",
-            title="Test",
-            thumbnail="",
-            duration=60,
-            uploader="Channel",
-            formats=[
-                VideoFormat(
-                    format_id="137",
-                    ext="mp4",
-                    quality="1080p",
-                    has_video=True,
-                    has_audio=False,
-                    filesize_approx=50000000,
-                ),
-            ],
-        )
-
-        response = client.get(
-            "/api/formats",
-            params={"url": "https://www.youtube.com/watch?v=test"},
-        )
-
-        assert response.status_code == 200
-        formats = response.json()
-        assert len(formats) == 1
-        assert formats[0]["quality"] == "1080p"
-
-    @patch("app.routers.info.extract_video_info")
-    def test_returns_400_for_invalid_url(self, mock_extract: MagicMock, client) -> None:
-        from app.services.youtube import InvalidURLError
-
-        mock_extract.side_effect = InvalidURLError("invalid")
-
-        response = client.get(
-            "/api/formats",
-            params={"url": "not-a-youtube-url"},
-        )
-
-        assert response.status_code == 400
 
 
 class TestErrorMasking:

@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 
 from app.limiter import limiter
 from app.routers.shared import error_response
-from app.schemas.video import ErrorEnvelope, PlaylistInfo, VideoFormat, VideoInfo
+from app.schemas.video import ErrorEnvelope, PlaylistInfo, VideoInfo
 from app.services.youtube import (
     InvalidURLError,
     VideoNotFoundError,
@@ -59,49 +59,6 @@ async def get_info(
             500,
             "extraction_error",
             "Could not process this URL. Please try a different one.",
-            detail=str(e),
-        )
-
-
-@router.get(
-    "/formats",
-    response_model=list[VideoFormat],
-    responses={
-        400: {"model": ErrorEnvelope},
-        404: {"model": ErrorEnvelope},
-        500: {"model": ErrorEnvelope},
-    },
-)
-@limiter.limit("30/minute")
-async def get_formats(
-    request: Request,
-    url: str = Query(..., description="YouTube video URL"),
-) -> list | JSONResponse:
-    """List available download formats for a YouTube video.
-
-    Args:
-        url: YouTube video URL.
-
-    Returns:
-        List of available VideoFormat objects.
-    """
-    try:
-        info = extract_video_info(url)
-        return info.formats
-    except InvalidURLError as e:
-        return error_response(400, "invalid_url", str(e))
-    except VideoNotFoundError as e:
-        return error_response(
-            404,
-            "not_found",
-            "The requested video is not available.",
-            detail=str(e),
-        )
-    except YouTubeError as e:
-        return error_response(
-            500,
-            "extraction_error",
-            "Could not list formats for this URL.",
             detail=str(e),
         )
 
