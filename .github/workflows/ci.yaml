@@ -71,8 +71,8 @@ jobs:
       - name: pip-audit (backend)
         run: |
           pip install pip-audit
-          pip-audit -r backend/requirements.lock --strict
-          pip-audit -r backend/requirements-dev.lock --strict
+          python -m pip_audit -r backend/requirements.lock --strict
+          python -m pip_audit -r backend/requirements-dev.lock --strict
   docker-build:
     runs-on: ubuntu-latest
     steps:
