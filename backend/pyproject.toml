@@ -8,7 +8,10 @@ version = "0.1.0"
 description = "Privacy-first YouTube downloader backend"
 requires-python = ">=3.12"
 dependencies = [
-    "fastapi>=0.115.0,<0.120",
+    # 0.121.0 is the earliest release that pulls starlette>=0.49.1, which
+    # is the fix line for CVE-2025-62727. Cap below 0.124 so dependabot
+    # surfaces minor bumps as PRs rather than letting CI float.
+    "fastapi>=0.121.0,<0.124",
     "uvicorn[standard]>=0.30.0,<0.40",
     "yt-dlp==2026.3.17",
     "slowapi>=0.1.9,<0.2",
@@ -16,8 +19,10 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.0,<9.0",
-    "pytest-asyncio>=0.24.0,<1.0",
+    # 9.0.3 fixes CVE-2025-71176 (insecure /tmp/pytest-of-{user} handling
+    # on UNIX). Cap below 10.0 so a future major bump surfaces as a PR.
+    "pytest>=9.0.3,<10.0",
+    "pytest-asyncio>=0.24.0,<2.0",
     "httpx>=0.27.0,<1.0",
 ]
 
