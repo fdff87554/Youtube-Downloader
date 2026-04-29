@@ -54,18 +54,28 @@ with `proxy_buffering off` so the bytes flow straight through to the client.
 ## Quick start (Docker)
 
 ```bash
-# Build and run
-docker compose up --build -d
+# Local development: DEBUG=true makes CORS fall back to wildcard so the
+# container can start without an ALLOWED_ORIGINS value. See "Configuration"
+# below for production usage.
+DEBUG=true docker compose up --build -d
 
 # Visit http://localhost:8080
 # Health check
 curl http://localhost:8080/api/health
 ```
 
+For a production-like local run (still recommended for any non-loopback
+deployment), set `ALLOWED_ORIGINS` to the origin you will browse from
+instead of `DEBUG=true`:
+
+```bash
+ALLOWED_ORIGINS=http://localhost:8080 docker compose up --build -d
+```
+
 To use a different host port:
 
 ```bash
-PORT=9000 docker compose up -d
+DEBUG=true PORT=9000 docker compose up -d
 ```
 
 ## Configuration
