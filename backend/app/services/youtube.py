@@ -209,6 +209,7 @@ def _stream_mp3(url: str) -> Generator[bytes, None, None]:
         "-",
         "--quiet",
         "--no-warnings",
+        "--no-cache-dir",
         "--socket-timeout",
         str(SOCKET_TIMEOUT),
         url,
@@ -372,6 +373,7 @@ def _build_video_command(url: str, quality: str) -> list[str]:
         "mp4",
         "--quiet",
         "--no-warnings",
+        "--no-cache-dir",
         "--socket-timeout",
         str(SOCKET_TIMEOUT),
         url,
@@ -403,6 +405,9 @@ def _base_opts() -> dict[str, Any]:
         "quiet": True,
         "no_warnings": True,
         "socket_timeout": SOCKET_TIMEOUT,
+        # Disable yt-dlp's player JS cache so the service writes nothing
+        # to ~/.cache/yt-dlp at runtime.
+        "cachedir": False,
     }
 
 
