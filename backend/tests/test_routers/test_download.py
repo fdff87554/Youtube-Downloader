@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 class TestDownloadVideo:
     @patch("app.routers.download.stream_download")
-    def test_returns_streaming_response_for_mp4(
+    def test_download_with_mp4_returns_streaming_video_response(
         self,
         mock_stream: MagicMock,
         client,
@@ -27,7 +27,7 @@ class TestDownloadVideo:
         assert response.headers.get("content-type") == "video/mp4"
 
     @patch("app.routers.download.stream_download")
-    def test_returns_audio_mpeg_for_mp3(
+    def test_download_with_mp3_returns_audio_mpeg_response(
         self,
         mock_stream: MagicMock,
         client,
@@ -45,7 +45,7 @@ class TestDownloadVideo:
         assert response.status_code == 200
         assert response.headers.get("content-type") == "audio/mpeg"
 
-    def test_returns_400_for_invalid_url(self, client) -> None:
+    def test_download_with_invalid_url_returns_400(self, client) -> None:
         response = client.get(
             "/api/download",
             params={"url": "https://example.com/video"},
@@ -55,7 +55,7 @@ class TestDownloadVideo:
         assert response.json()["error"]["code"] == "invalid_url"
 
     @patch("app.routers.download.stream_download")
-    def test_returns_500_for_download_failure(
+    def test_download_when_stream_fails_returns_500(
         self,
         mock_stream: MagicMock,
         client,
@@ -72,13 +72,13 @@ class TestDownloadVideo:
         assert response.status_code == 500
         assert response.json()["error"]["code"] == "download_error"
 
-    def test_returns_422_for_missing_url(self, client) -> None:
+    def test_download_without_url_returns_422(self, client) -> None:
         response = client.get("/api/download")
 
         assert response.status_code == 422
 
     @patch("app.routers.download.stream_download")
-    def test_uses_title_for_filename(
+    def test_download_with_title_uses_it_in_content_disposition(
         self,
         mock_stream: MagicMock,
         client,
@@ -98,7 +98,7 @@ class TestDownloadVideo:
         assert "My%20Video" in disposition
 
     @patch("app.routers.download.stream_download")
-    def test_fallback_filename_without_title(
+    def test_download_without_title_uses_default_filename(
         self,
         mock_stream: MagicMock,
         client,
