@@ -45,9 +45,19 @@ async def get_info(
     except InvalidURLError as e:
         return error_response(400, "invalid_url", str(e))
     except VideoNotFoundError as e:
-        return error_response(404, "not_found", str(e))
+        return error_response(
+            404,
+            "not_found",
+            "The requested video or playlist is not available.",
+            detail=str(e),
+        )
     except YouTubeError as e:
-        return error_response(500, "extraction_error", str(e))
+        return error_response(
+            500,
+            "extraction_error",
+            "Could not process this URL. Please try a different one.",
+            detail=str(e),
+        )
 
 
 @router.get(
@@ -76,9 +86,19 @@ async def get_formats(
     except InvalidURLError as e:
         return error_response(400, "invalid_url", str(e))
     except VideoNotFoundError as e:
-        return error_response(404, "not_found", str(e))
+        return error_response(
+            404,
+            "not_found",
+            "The requested video is not available.",
+            detail=str(e),
+        )
     except YouTubeError as e:
-        return error_response(500, "extraction_error", str(e))
+        return error_response(
+            500,
+            "extraction_error",
+            "Could not list formats for this URL.",
+            detail=str(e),
+        )
 
 
 def _is_playlist_url(url: str) -> bool:

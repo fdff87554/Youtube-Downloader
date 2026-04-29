@@ -91,6 +91,16 @@ async def download_video(
     except InvalidURLError as e:
         return error_response(400, "invalid_url", str(e))
     except VideoNotFoundError as e:
-        return error_response(404, "not_found", str(e))
+        return error_response(
+            404,
+            "not_found",
+            "The requested video is not available.",
+            detail=str(e),
+        )
     except YouTubeError as e:
-        return error_response(500, "download_error", str(e))
+        return error_response(
+            500,
+            "download_error",
+            "Could not start the download. Please try again.",
+            detail=str(e),
+        )
