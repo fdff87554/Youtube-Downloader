@@ -72,14 +72,16 @@ PORT=9000 docker compose up -d
 
 The container reads the following environment variables:
 
-| Variable          | Default | Description                                |
-| ----------------- | ------- | ------------------------------------------ |
-| `ALLOWED_ORIGINS` | `*`     | Comma-separated origins allowed by CORS    |
-| `DEBUG`           | `false` | When `true`, errors include exception text |
-| `PORT`            | `8080`  | Host port forwarded to the container       |
+| Variable          | Default    | Description                                |
+| ----------------- | ---------- | ------------------------------------------ |
+| `ALLOWED_ORIGINS` | _required_ | Comma-separated CORS origins (see below)   |
+| `DEBUG`           | `false`    | When `true`, errors include exception text |
+| `PORT`            | `8080`     | Host port forwarded to the container       |
 
-For public deployments, **set `ALLOWED_ORIGINS` to your actual frontend
-origin** instead of relying on the wildcard default.
+`ALLOWED_ORIGINS` must be set to the origin(s) that may call the API,
+e.g. `https://example.com,https://x.example.com`. The application
+refuses to start with an empty value unless `DEBUG=true`, in which case
+all origins are permitted (for local development only).
 
 ## Development
 
@@ -119,8 +121,9 @@ npm run dev    # dev server on http://localhost:5173, proxies /api to :8000
 npm run build  # production build into frontend/dist
 ```
 
-Run the backend (`uvicorn app.main:app --port 8000`) at the same time so
-the dev server's `/api` proxy has somewhere to forward to.
+Run the backend
+(`DEBUG=true uvicorn --factory app.main:create_app --port 8000`) at the
+same time so the dev server's `/api` proxy has somewhere to forward to.
 
 ### Pre-commit hooks
 

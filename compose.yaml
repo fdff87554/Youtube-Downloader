@@ -6,6 +6,9 @@ services:
     ports:
       - "${PORT:-8080}:8080"
     environment:
-      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
+      # Set ALLOWED_ORIGINS to your frontend origin (or a comma-separated
+      # list) for any internet-facing deployment. Leaving it unset is only
+      # permitted when DEBUG=true (local development).
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-}
       - DEBUG=${DEBUG:-false}
     restart: unless-stopped
