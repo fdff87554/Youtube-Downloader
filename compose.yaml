@@ -8,7 +8,8 @@ services:
     environment:
       # Set ALLOWED_ORIGINS to your frontend origin (or a comma-separated
       # list) for any internet-facing deployment. Leaving it unset is only
-      # permitted when DEBUG=true (local development).
+      # permitted when DEBUG=true (local development); the application
+      # refuses to start otherwise. See README "Quick start" for examples.
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-}
       - DEBUG=${DEBUG:-false}
     restart: unless-stopped
