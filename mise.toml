@@ -1,6 +1,6 @@
 [tools]
-python = "3.12"
-node = "22"
+python = "3.12.13"
+node = "22.22.2"
 ruff = "0.15.8"
 yamlfmt = "0.21.0"
 shfmt = "3.13.0"

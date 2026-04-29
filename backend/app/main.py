@@ -6,6 +6,10 @@ import os
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+
+from app.limiter import limiter
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +28,7 @@ def create_app() -> FastAPI:
     )
 
     _configure_cors(app)
+    _configure_rate_limiter(app)
     _configure_exception_handlers(app)
     _include_routers(app)
     _add_health_check(app)
@@ -31,8 +36,45 @@ def create_app() -> FastAPI:
     return app
 
 
+def _configure_rate_limiter(app: FastAPI) -> None:
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_handler)
+    app.add_middleware(SlowAPIMiddleware)
+
+
+def _rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+    return JSONResponse(
+        status_code=429,
+        content={
+            "error": {
+                "code": "rate_limited",
+                "message": (
+                    f"Rate limit exceeded: {exc.detail}. "
+                    "Please slow down and try again."
+                ),
+            }
+        },
+    )
+
+
 def _configure_cors(app: FastAPI) -> None:
-    allowed_origins = os.environ.get("ALLOWED_ORIGINS", "*").split(",")
+    raw = os.environ.get("ALLOWED_ORIGINS", "").strip()
+    if raw:
+        allowed_origins = [
+            origin.strip() for origin in raw.split(",") if origin.strip()
+        ]
+    else:
+        debug = os.environ.get("DEBUG", "false").lower() == "true"
+        if not debug:
+            raise RuntimeError(
+                "ALLOWED_ORIGINS must be set explicitly in production. "
+                "Use a comma-separated list of origins (e.g. https://example.com), "
+                "or set DEBUG=true to allow all origins for local development."
+            )
+        logger.warning(
+            "ALLOWED_ORIGINS not set; allowing all origins because DEBUG=true."
+        )
+        allowed_origins = ["*"]
     app.add_middleware(
         CORSMiddleware,
         allow_origins=allowed_origins,
@@ -67,6 +109,3 @@ def _include_routers(app: FastAPI) -> None:
 
     app.include_router(info_router)
     app.include_router(download_router)
-
-
-app = create_app()

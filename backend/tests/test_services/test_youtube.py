@@ -1,5 +1,6 @@
 """Unit tests for the YouTube service layer."""
 
+import signal
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -7,6 +8,10 @@ import pytest
 from app.services.youtube import (
     InvalidURLError,
     VideoNotFoundError,
+    _base_opts,
+    _build_video_command,
+    _finalize_process,
+    _resolve_video_format,
     build_download_filename,
     extract_playlist_info,
     extract_video_info,
@@ -115,6 +120,28 @@ class TestExtractVideoInfo:
 
 class TestExtractPlaylistInfo:
     @patch("app.services.youtube.yt_dlp.YoutubeDL")
+    def test_rejects_playlist_above_size_limit(self, mock_ydl_cls: MagicMock) -> None:
+        from app.services.youtube import MAX_PLAYLIST_SIZE, YouTubeError
+
+        mock_info = {
+            "id": "PLhuge",
+            "title": "Huge Playlist",
+            "uploader": "Creator",
+            "entries": [
+                {"id": f"v{i}", "title": f"Video {i}", "duration": 60, "thumbnail": ""}
+                for i in range(MAX_PLAYLIST_SIZE + 1)
+            ],
+        }
+        mock_ydl = MagicMock()
+        mock_ydl.extract_info.return_value = mock_info
+        mock_ydl.__enter__ = MagicMock(return_value=mock_ydl)
+        mock_ydl.__exit__ = MagicMock(return_value=False)
+        mock_ydl_cls.return_value = mock_ydl
+
+        with pytest.raises(YouTubeError, match=r"exceeds the .* limit"):
+            extract_playlist_info("https://www.youtube.com/playlist?list=PLhuge")
+
+    @patch("app.services.youtube.yt_dlp.YoutubeDL")
     def test_returns_playlist_with_entries(self, mock_ydl_cls: MagicMock) -> None:
         mock_info = {
             "id": "PLtest123",
@@ -200,3 +227,74 @@ class TestBuildDownloadFilename:
         result = build_download_filename("", "mp4")
 
         assert result == "download.mp4"
+
+
+class TestCacheDisabled:
+    def test_base_opts_disable_cachedir(self) -> None:
+        assert _base_opts()["cachedir"] is False
+
+    def test_video_command_passes_no_cache_dir(self) -> None:
+        cmd = _build_video_command("https://www.youtube.com/watch?v=test", "best")
+        assert "--no-cache-dir" in cmd
+
+
+class TestResolveVideoFormat:
+    @pytest.mark.parametrize("quality", ["480", "720", "1080"])
+    def test_bounded_quality_never_falls_back_to_unrestricted_best(
+        self, quality: str
+    ) -> None:
+        spec = _resolve_video_format(quality)
+        for fallback in spec.split("/"):
+            assert f"height<={quality}" in fallback, (
+                f"fallback {fallback!r} for quality {quality} would allow "
+                "an unbounded best download"
+            )
+
+    def test_best_quality_falls_back_to_unrestricted_best(self) -> None:
+        spec = _resolve_video_format("best")
+        assert spec.endswith("/best")
+
+    def test_unknown_quality_falls_back_to_best_spec(self) -> None:
+        assert _resolve_video_format("garbage") == _resolve_video_format("best")
+
+
+class TestFinalizeProcess:
+    def _make_process(self, returncode: int) -> MagicMock:
+        process = MagicMock()
+        process.poll.return_value = returncode  # already exited
+        process.returncode = returncode
+        process.stdout = None
+        return process
+
+    def test_logs_error_when_process_exits_non_zero(self) -> None:
+        process = self._make_process(returncode=1)
+
+        with patch("app.services.youtube.logger") as mock_logger:
+            _finalize_process("yt-dlp", process, drainer=None)
+
+        mock_logger.error.assert_called_once_with("%s exited with code %s", "yt-dlp", 1)
+
+    def test_does_not_log_error_for_clean_exit(self) -> None:
+        process = self._make_process(returncode=0)
+
+        with patch("app.services.youtube.logger") as mock_logger:
+            _finalize_process("ffmpeg", process, drainer=None)
+
+        mock_logger.error.assert_not_called()
+
+    def test_does_not_log_error_for_sigkill(self) -> None:
+        # We send SIGKILL ourselves during teardown, so it is expected.
+        process = self._make_process(returncode=-signal.SIGKILL)
+
+        with patch("app.services.youtube.logger") as mock_logger:
+            _finalize_process("yt-dlp", process, drainer=None)
+
+        mock_logger.error.assert_not_called()
+
+    def test_handles_none_process_silently(self) -> None:
+        # The streaming pipelines call _finalize_process from outer finally
+        # blocks where the subprocess may have failed to initialize.
+        with patch("app.services.youtube.logger") as mock_logger:
+            _finalize_process("yt-dlp", process=None, drainer=None)
+
+        mock_logger.error.assert_not_called()
