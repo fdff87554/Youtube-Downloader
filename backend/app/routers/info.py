@@ -2,9 +2,10 @@
 
 from urllib.parse import urlparse
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Request
 from fastapi.responses import JSONResponse
 
+from app.limiter import limiter
 from app.routers.shared import error_response
 from app.schemas.video import ErrorEnvelope, PlaylistInfo, VideoFormat, VideoInfo
 from app.services.youtube import (
@@ -27,7 +28,9 @@ router = APIRouter(prefix="/api", tags=["info"])
         500: {"model": ErrorEnvelope},
     },
 )
+@limiter.limit("30/minute")
 async def get_info(
+    request: Request,
     url: str = Query(..., description="YouTube video or playlist URL"),
 ) -> VideoInfo | PlaylistInfo | JSONResponse:
     """Retrieve metadata for a YouTube video or playlist.
@@ -69,7 +72,9 @@ async def get_info(
         500: {"model": ErrorEnvelope},
     },
 )
+@limiter.limit("30/minute")
 async def get_formats(
+    request: Request,
     url: str = Query(..., description="YouTube video URL"),
 ) -> list | JSONResponse:
     """List available download formats for a YouTube video.

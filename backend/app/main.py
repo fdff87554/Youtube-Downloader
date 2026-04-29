@@ -6,6 +6,10 @@ import os
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+
+from app.limiter import limiter
 
 logger = logging.getLogger(__name__)
 
@@ -24,11 +28,33 @@ def create_app() -> FastAPI:
     )
 
     _configure_cors(app)
+    _configure_rate_limiter(app)
     _configure_exception_handlers(app)
     _include_routers(app)
     _add_health_check(app)
 
     return app
+
+
+def _configure_rate_limiter(app: FastAPI) -> None:
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_handler)
+    app.add_middleware(SlowAPIMiddleware)
+
+
+def _rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+    return JSONResponse(
+        status_code=429,
+        content={
+            "error": {
+                "code": "rate_limited",
+                "message": (
+                    f"Rate limit exceeded: {exc.detail}. "
+                    "Please slow down and try again."
+                ),
+            }
+        },
+    )
 
 
 def _configure_cors(app: FastAPI) -> None:
