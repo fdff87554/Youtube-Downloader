@@ -69,13 +69,6 @@ export async function fetchInfo(url: string): Promise<InfoResponse> {
   return handleResponse<InfoResponse>(response);
 }
 
-export async function fetchFormats(url: string): Promise<VideoFormat[]> {
-  const response = await fetch(
-    `${API_BASE}/formats?${new URLSearchParams({ url })}`,
-  );
-  return handleResponse<VideoFormat[]>(response);
-}
-
 export function buildDownloadUrl(
   url: string,
   fmt: "mp4" | "mp3" = "mp4",

@@ -3,9 +3,10 @@
 from enum import StrEnum
 from urllib.parse import quote
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
+from app.limiter import limiter
 from app.routers.shared import error_response
 from app.schemas.video import ErrorEnvelope
 from app.services.youtube import (
@@ -52,7 +53,9 @@ MEDIA_TYPES = {
         500: {"model": ErrorEnvelope},
     },
 )
+@limiter.limit("5/minute")
 async def download_video(
+    request: Request,
     url: str = Query(..., description="YouTube video URL"),
     fmt: FormatType = FormatType.MP4,
     quality: Quality = Quality.BEST,
@@ -91,6 +94,16 @@ async def download_video(
     except InvalidURLError as e:
         return error_response(400, "invalid_url", str(e))
     except VideoNotFoundError as e:
-        return error_response(404, "not_found", str(e))
+        return error_response(
+            404,
+            "not_found",
+            "The requested video is not available.",
+            detail=str(e),
+        )
     except YouTubeError as e:
-        return error_response(500, "download_error", str(e))
+        return error_response(
+            500,
+            "download_error",
+            "Could not start the download. Please try again.",
+            detail=str(e),
+        )
