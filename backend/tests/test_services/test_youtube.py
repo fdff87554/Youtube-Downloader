@@ -8,6 +8,8 @@ import pytest
 from app.services.youtube import (
     InvalidURLError,
     VideoNotFoundError,
+    _base_opts,
+    _build_video_command,
     _finalize_process,
     _resolve_video_format,
     build_download_filename,
@@ -225,6 +227,15 @@ class TestBuildDownloadFilename:
         result = build_download_filename("", "mp4")
 
         assert result == "download.mp4"
+
+
+class TestCacheDisabled:
+    def test_base_opts_disable_cachedir(self) -> None:
+        assert _base_opts()["cachedir"] is False
+
+    def test_video_command_passes_no_cache_dir(self) -> None:
+        cmd = _build_video_command("https://www.youtube.com/watch?v=test", "best")
+        assert "--no-cache-dir" in cmd
 
 
 class TestResolveVideoFormat:
