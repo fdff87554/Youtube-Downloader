@@ -9,6 +9,7 @@ from app.services.youtube import (
     InvalidURLError,
     VideoNotFoundError,
     _finalize_process,
+    _resolve_video_format,
     build_download_filename,
     extract_playlist_info,
     extract_video_info,
@@ -224,6 +225,26 @@ class TestBuildDownloadFilename:
         result = build_download_filename("", "mp4")
 
         assert result == "download.mp4"
+
+
+class TestResolveVideoFormat:
+    @pytest.mark.parametrize("quality", ["480", "720", "1080"])
+    def test_bounded_quality_never_falls_back_to_unrestricted_best(
+        self, quality: str
+    ) -> None:
+        spec = _resolve_video_format(quality)
+        for fallback in spec.split("/"):
+            assert f"height<={quality}" in fallback, (
+                f"fallback {fallback!r} for quality {quality} would allow "
+                "an unbounded best download"
+            )
+
+    def test_best_quality_falls_back_to_unrestricted_best(self) -> None:
+        spec = _resolve_video_format("best")
+        assert spec.endswith("/best")
+
+    def test_unknown_quality_falls_back_to_best_spec(self) -> None:
+        assert _resolve_video_format("garbage") == _resolve_video_format("best")
 
 
 class TestFinalizeProcess:

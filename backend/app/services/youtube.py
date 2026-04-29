@@ -379,14 +379,21 @@ def _build_video_command(url: str, quality: str) -> list[str]:
 
 
 def _resolve_video_format(quality: str) -> str:
-    _v = "bestvideo[ext=mp4]"
-    _a = "bestaudio[ext=m4a]"
-    _fb = "best[ext=mp4]/best"
+    """Build the yt-dlp format spec for a requested quality.
+
+    Each height-bounded entry keeps the height ceiling on every fallback
+    so that requesting 480p never silently downloads 1080p when the
+    requested resolution is unavailable. The "best" tier has no ceiling
+    so it falls all the way back to whatever yt-dlp can produce.
+    """
+    best_video = "bestvideo[ext=mp4]"
+    best_audio = "bestaudio[ext=m4a]"
+    best_combined_fallback = "best[ext=mp4]/best"
     quality_map = {
-        "best": f"{_v}+{_a}/{_fb}",
-        "1080": f"{_v}[height<=1080]+{_a}/best[height<=1080]/best",
-        "720": f"{_v}[height<=720]+{_a}/best[height<=720]/best",
-        "480": f"{_v}[height<=480]+{_a}/best[height<=480]/best",
+        "best": f"{best_video}+{best_audio}/{best_combined_fallback}",
+        "1080": f"{best_video}[height<=1080]+{best_audio}/best[height<=1080]",
+        "720": f"{best_video}[height<=720]+{best_audio}/best[height<=720]",
+        "480": f"{best_video}[height<=480]+{best_audio}/best[height<=480]",
     }
     return quality_map.get(quality, quality_map["best"])
 
