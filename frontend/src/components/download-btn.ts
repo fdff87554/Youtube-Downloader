@@ -22,12 +22,3 @@ export function createDownloadButton(onClick: () => void): HTMLElement {
 
   return container;
 }
-
-export function setDownloadLoading(
-  container: HTMLElement,
-  loading: boolean,
-): void {
-  const button = container.querySelector<HTMLButtonElement>("#download-btn")!;
-  button.disabled = loading;
-  button.textContent = loading ? "Preparing download..." : "Download";
-}
