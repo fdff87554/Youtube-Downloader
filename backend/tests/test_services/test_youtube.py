@@ -290,3 +290,11 @@ class TestFinalizeProcess:
             _finalize_process("yt-dlp", process, drainer=None)
 
         mock_logger.error.assert_not_called()
+
+    def test_handles_none_process_silently(self) -> None:
+        # The streaming pipelines call _finalize_process from outer finally
+        # blocks where the subprocess may have failed to initialize.
+        with patch("app.services.youtube.logger") as mock_logger:
+            _finalize_process("yt-dlp", process=None, drainer=None)
+
+        mock_logger.error.assert_not_called()
