@@ -2,6 +2,10 @@
 
 from unittest.mock import MagicMock, patch
 
+import pytest
+from fastapi.testclient import TestClient
+
+from app.main import create_app
 from app.schemas.video import VideoFormat, VideoInfo
 
 
@@ -127,3 +131,51 @@ class TestGetFormats:
         )
 
         assert response.status_code == 400
+
+
+class TestErrorMasking:
+    """Verify upstream error detail is hidden when DEBUG is off."""
+
+    def _make_client(self, monkeypatch: pytest.MonkeyPatch, debug: bool) -> TestClient:
+        monkeypatch.setenv("DEBUG", "true" if debug else "false")
+        monkeypatch.setenv("ALLOWED_ORIGINS", "*")
+        return TestClient(create_app())
+
+    @patch("app.routers.info.extract_video_info")
+    def test_500_message_hides_detail_when_debug_off(
+        self, mock_extract: MagicMock, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from app.services.youtube import YouTubeError
+
+        sensitive = "yt-dlp internal trace at /tmp/secret-path"
+        mock_extract.side_effect = YouTubeError(sensitive)
+        client = self._make_client(monkeypatch, debug=False)
+
+        response = client.get(
+            "/api/info",
+            params={"url": "https://www.youtube.com/watch?v=test"},
+        )
+
+        assert response.status_code == 500
+        body = response.json()
+        assert body["error"]["code"] == "extraction_error"
+        assert sensitive not in body["error"]["message"]
+        assert "secret-path" not in body["error"]["message"]
+
+    @patch("app.routers.info.extract_video_info")
+    def test_500_message_includes_detail_when_debug_on(
+        self, mock_extract: MagicMock, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from app.services.youtube import YouTubeError
+
+        mock_extract.side_effect = YouTubeError("specific yt-dlp error 42")
+        client = self._make_client(monkeypatch, debug=True)
+
+        response = client.get(
+            "/api/info",
+            params={"url": "https://www.youtube.com/watch?v=test"},
+        )
+
+        assert response.status_code == 500
+        body = response.json()
+        assert "specific yt-dlp error 42" in body["error"]["message"]
