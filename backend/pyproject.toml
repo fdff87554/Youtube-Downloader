@@ -12,7 +12,7 @@ dependencies = [
     # is the fix line for CVE-2025-62727. Cap below 0.124 so dependabot
     # surfaces minor bumps as PRs rather than letting CI float.
     "fastapi>=0.121.0,<0.124",
-    "uvicorn[standard]>=0.30.0,<0.40",
+    "uvicorn[standard]>=0.30.0,<0.47",
     "yt-dlp==2026.3.17",
     "slowapi>=0.1.9,<0.2",
 ]
