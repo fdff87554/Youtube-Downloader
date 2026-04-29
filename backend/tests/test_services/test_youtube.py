@@ -1,5 +1,6 @@
 """Unit tests for the YouTube service layer."""
 
+import signal
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -7,6 +8,7 @@ import pytest
 from app.services.youtube import (
     InvalidURLError,
     VideoNotFoundError,
+    _finalize_process,
     build_download_filename,
     extract_playlist_info,
     extract_video_info,
@@ -200,3 +202,37 @@ class TestBuildDownloadFilename:
         result = build_download_filename("", "mp4")
 
         assert result == "download.mp4"
+
+
+class TestFinalizeProcess:
+    def _make_process(self, returncode: int) -> MagicMock:
+        process = MagicMock()
+        process.poll.return_value = returncode  # already exited
+        process.returncode = returncode
+        process.stdout = None
+        return process
+
+    def test_logs_error_when_process_exits_non_zero(self) -> None:
+        process = self._make_process(returncode=1)
+
+        with patch("app.services.youtube.logger") as mock_logger:
+            _finalize_process("yt-dlp", process, drainer=None)
+
+        mock_logger.error.assert_called_once_with("%s exited with code %s", "yt-dlp", 1)
+
+    def test_does_not_log_error_for_clean_exit(self) -> None:
+        process = self._make_process(returncode=0)
+
+        with patch("app.services.youtube.logger") as mock_logger:
+            _finalize_process("ffmpeg", process, drainer=None)
+
+        mock_logger.error.assert_not_called()
+
+    def test_does_not_log_error_for_sigkill(self) -> None:
+        # We send SIGKILL ourselves during teardown, so it is expected.
+        process = self._make_process(returncode=-signal.SIGKILL)
+
+        with patch("app.services.youtube.logger") as mock_logger:
+            _finalize_process("yt-dlp", process, drainer=None)
+
+        mock_logger.error.assert_not_called()
