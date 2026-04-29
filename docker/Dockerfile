@@ -51,6 +51,17 @@ COPY docker/nginx.conf /etc/nginx/nginx.conf
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
+# Run as a non-root user. Create the account, give it ownership of the
+# directories nginx writes to (cache and lib state), and switch to it
+# for the rest of the image. Logs go to stdout/stderr (configured in
+# nginx.conf) so /var/log/nginx does not need to be writable.
+RUN groupadd --system --gid 1000 app \
+    && useradd --system --uid 1000 --gid app --create-home --home-dir /home/app app \
+    && mkdir -p /var/lib/nginx /var/lib/nginx/body /var/lib/nginx/proxy \
+    /var/lib/nginx/fastcgi /var/lib/nginx/uwsgi /var/lib/nginx/scgi \
+    && chown -R app:app /var/lib/nginx
+USER app
+
 EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
