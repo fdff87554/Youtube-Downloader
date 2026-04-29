@@ -2,6 +2,8 @@
 
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 
 class TestDownloadVideo:
     @patch("app.routers.download.stream_download")
@@ -113,3 +115,44 @@ class TestDownloadVideo:
         assert response.status_code == 200
         disposition = response.headers.get("content-disposition", "")
         assert "download.mp4" in disposition
+
+    @patch("app.routers.download.stream_download")
+    def test_download_failure_mid_stream_does_not_become_json_envelope(
+        self,
+        mock_stream: MagicMock,
+        client,
+    ) -> None:
+        """Once StreamingResponse starts, a generator-time failure cannot
+        be turned into the standard JSON 5xx envelope -- HTTP headers
+        have already been written.
+
+        In a real ASGI deployment the client sees a truncated body /
+        ERR_INCOMPLETE_CHUNKED_ENCODING. Under TestClient the exception
+        propagates to the caller (see anyio task-group surface). Either
+        way the response cannot be a JSON envelope claiming success.
+
+        This test pins that contract so future contributors do not add
+        a try/except around StreamingResponse and assume it can yield
+        a JSON 5xx body.
+        """
+        from app.services.youtube import YouTubeError
+
+        def failing_generator():
+            yield b"partial"
+            raise YouTubeError("simulated yt-dlp crash mid-stream")
+
+        mock_stream.return_value = failing_generator()
+
+        with (
+            pytest.raises(YouTubeError, match="simulated yt-dlp"),
+            client.stream(
+                "GET",
+                "/api/download",
+                params={"url": "https://www.youtube.com/watch?v=test"},
+            ) as response,
+        ):
+            # Headers were already on the wire before the failure.
+            assert response.status_code == 200
+            assert response.headers["content-type"] == "video/mp4"
+            for _ in response.iter_bytes():
+                pass
