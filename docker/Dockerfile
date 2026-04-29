@@ -4,7 +4,7 @@
 FROM denoland/deno:bin-2.7.14 AS deno-bin
 
 # Stage 1: Build frontend
-FROM node:22-alpine AS frontend-build
+FROM node:22.22.2-alpine AS frontend-build
 WORKDIR /build
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
@@ -14,14 +14,14 @@ RUN npm run build
 # Stage 2: Install backend dependencies from the pinned lockfile.
 # The application package itself is mounted via PYTHONPATH in stage 3, so we only
 # need the third-party dependencies here.
-FROM python:3.12-slim AS backend-deps
+FROM python:3.12.13-slim-bookworm AS backend-deps
 WORKDIR /build
 RUN pip install --no-cache-dir --upgrade pip
 COPY backend/requirements.lock ./
 RUN pip install --no-cache-dir --prefix=/install -r requirements.lock
 
 # Stage 3: Runtime
-FROM python:3.12-slim
+FROM python:3.12.13-slim-bookworm
 
 # Install nginx (reverse proxy + static files), ffmpeg (audio/video muxing
 # for yt-dlp), and curl (used by HEALTHCHECK).
