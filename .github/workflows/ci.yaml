@@ -12,7 +12,9 @@ jobs:
       - name: Install mise
         uses: jdx/mise-action@v2
       - name: Install backend dependencies
-        run: pip install -e "backend[dev]"
+        run: |
+          pip install -r backend/requirements-dev.lock
+          pip install -e backend --no-deps
       - name: Install frontend dependencies
         run: cd frontend && npm ci
       - name: Install pre-commit

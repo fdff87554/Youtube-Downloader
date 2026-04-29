@@ -6,12 +6,14 @@ RUN npm ci
 COPY frontend/ .
 RUN npm run build
 
-# Stage 2: Install backend dependencies
+# Stage 2: Install backend dependencies from the pinned lockfile.
+# The application package itself is mounted via PYTHONPATH in stage 3, so we only
+# need the third-party dependencies here.
 FROM python:3.12-slim AS backend-deps
 WORKDIR /build
 RUN pip install --no-cache-dir --upgrade pip
-COPY backend/pyproject.toml .
-RUN pip install --no-cache-dir --prefix=/install .
+COPY backend/requirements.lock ./
+RUN pip install --no-cache-dir --prefix=/install -r requirements.lock
 
 # Stage 3: Runtime
 FROM python:3.12-slim
