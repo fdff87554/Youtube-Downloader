@@ -3,6 +3,7 @@ import {
   fetchInfo,
   isPlaylistInfo,
   isVideoInfo,
+  type PlaylistInfo,
   type VideoInfo,
 } from "./api";
 import { createDownloadButton } from "./components/download-btn";
@@ -16,9 +17,32 @@ import { createVideoInfo } from "./components/video-info";
 import "./styles/main.css";
 import { escapeHtml } from "./utils";
 
-const app = document.querySelector<HTMLDivElement>("#app")!;
+interface Sections {
+  url: HTMLElement;
+  error: HTMLElement;
+  info: HTMLElement;
+  format: HTMLElement;
+  download: HTMLElement;
+}
 
-let currentSelection: FormatSelection = { fmt: "mp4", quality: "best" };
+interface SelectionStore {
+  get(): FormatSelection;
+  set(next: FormatSelection): void;
+}
+
+const DEFAULT_SELECTION: FormatSelection = { fmt: "mp4", quality: "best" };
+
+function createSelectionStore(initial: FormatSelection): SelectionStore {
+  let current = initial;
+  return {
+    get: () => current,
+    set: (next) => {
+      current = next;
+    },
+  };
+}
+
+const app = document.querySelector<HTMLDivElement>("#app")!;
 
 function render(): void {
   app.innerHTML = `
@@ -33,79 +57,90 @@ function render(): void {
     </main>
   `;
 
-  const urlSection = app.querySelector<HTMLDivElement>("#url-section")!;
-  const urlInput = createUrlInput(handleUrlSubmit);
-  urlSection.appendChild(urlInput);
+  const sections = getSections();
+  sections.url.appendChild(createUrlInput((url) => handleUrlSubmit(url, sections)));
 }
 
-async function handleUrlSubmit(url: string): Promise<void> {
-  const urlSection = app.querySelector<HTMLDivElement>("#url-section")!;
-  const errorSection = app.querySelector<HTMLDivElement>("#error-section")!;
-  const infoSection = app.querySelector<HTMLDivElement>("#info-section")!;
-  const formatSection = app.querySelector<HTMLDivElement>("#format-section")!;
-  const downloadSection =
-    app.querySelector<HTMLDivElement>("#download-section")!;
+function getSections(): Sections {
+  const find = (id: string) => app.querySelector<HTMLDivElement>(`#${id}`)!;
+  return {
+    url: find("url-section"),
+    error: find("error-section"),
+    info: find("info-section"),
+    format: find("format-section"),
+    download: find("download-section"),
+  };
+}
 
-  errorSection.innerHTML = "";
-  infoSection.innerHTML = "";
-  formatSection.innerHTML = "";
-  downloadSection.innerHTML = "";
-
-  setUrlInputLoading(urlSection, true);
+async function handleUrlSubmit(url: string, sections: Sections): Promise<void> {
+  clearOutputSections(sections);
+  setUrlInputLoading(sections.url, true);
 
   try {
     const info = await fetchInfo(url);
+    const selection = createSelectionStore(DEFAULT_SELECTION);
 
     if (isVideoInfo(info)) {
-      renderVideoFlow(info, url, infoSection, formatSection, downloadSection);
+      renderVideoFlow({ info, url, sections, selection });
     } else if (isPlaylistInfo(info)) {
-      const formatPicker = createFormatPicker((selection) => {
-        currentSelection = selection;
-      });
-      formatSection.appendChild(formatPicker);
-
-      const playlistView = createPlaylistView(
-        info,
-        () => currentSelection,
-      );
-      infoSection.appendChild(playlistView);
+      renderPlaylistFlow({ info, sections, selection });
     }
   } catch (err) {
-    const message = err instanceof Error ? err.message : "An error occurred";
-    errorSection.innerHTML = `
-      <div class="w-full max-w-2xl bg-red-50 border border-red-200 rounded-lg p-3">
-        <p class="text-sm text-red-700">${escapeHtml(message)}</p>
-      </div>
-    `;
+    showError(sections.error, err);
   } finally {
-    setUrlInputLoading(urlSection, false);
+    setUrlInputLoading(sections.url, false);
   }
 }
 
-function renderVideoFlow(
-  info: VideoInfo,
-  url: string,
-  infoSection: HTMLElement,
-  formatSection: HTMLElement,
-  downloadSection: HTMLElement,
-): void {
-  infoSection.appendChild(createVideoInfo(info));
+function clearOutputSections(sections: Sections): void {
+  sections.error.innerHTML = "";
+  sections.info.innerHTML = "";
+  sections.format.innerHTML = "";
+  sections.download.innerHTML = "";
+}
 
-  const formatPicker = createFormatPicker((selection) => {
-    currentSelection = selection;
-  });
-  formatSection.appendChild(formatPicker);
+function showError(target: HTMLElement, err: unknown): void {
+  const message = err instanceof Error ? err.message : "An error occurred";
+  target.innerHTML = `
+    <div class="w-full max-w-2xl bg-red-50 border border-red-200 rounded-lg p-3">
+      <p class="text-sm text-red-700">${escapeHtml(message)}</p>
+    </div>
+  `;
+}
 
-  const downloadBtn = createDownloadButton(() => {
-    const downloadUrl = buildDownloadUrl(
-      url,
-      currentSelection.fmt,
-      currentSelection.quality,
-      info.title,
-    );
-    window.open(downloadUrl, "_blank");
-  });
-  downloadSection.appendChild(downloadBtn);
+interface VideoFlowOptions {
+  info: VideoInfo;
+  url: string;
+  sections: Sections;
+  selection: SelectionStore;
+}
+
+function renderVideoFlow(opts: VideoFlowOptions): void {
+  const { info, url, sections, selection } = opts;
+
+  sections.info.appendChild(createVideoInfo(info));
+  sections.format.appendChild(createFormatPicker(selection.set));
+
+  sections.download.appendChild(
+    createDownloadButton(() => {
+      const sel = selection.get();
+      const downloadUrl = buildDownloadUrl(url, sel.fmt, sel.quality, info.title);
+      window.open(downloadUrl, "_blank");
+    }),
+  );
+}
+
+interface PlaylistFlowOptions {
+  info: PlaylistInfo;
+  sections: Sections;
+  selection: SelectionStore;
+}
+
+function renderPlaylistFlow(opts: PlaylistFlowOptions): void {
+  const { info, sections, selection } = opts;
+
+  sections.format.appendChild(createFormatPicker(selection.set));
+  sections.info.appendChild(createPlaylistView(info, selection.get));
 }
 
 render();
