@@ -189,9 +189,9 @@ Errors use a unified envelope:
 
 ## Troubleshooting
 
-- **Container exits with `RuntimeError: ALLOWED_ORIGINS must be set
-explicitly in production`.** The app refuses to start when
-  `ALLOWED_ORIGINS` is unset and `DEBUG` is not `true`. Set
+- **`ALLOWED_ORIGINS` startup failure.** The container exits with
+  `RuntimeError: ALLOWED_ORIGINS must be set explicitly in production`
+  when `ALLOWED_ORIGINS` is unset and `DEBUG` is not `true`. Set
   `ALLOWED_ORIGINS` in the deployment environment to the origin(s) the
   browser uses to reach the service (e.g.
   `https://your-domain.example`); for local development, set
