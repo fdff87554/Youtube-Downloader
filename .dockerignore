@@ -44,8 +44,6 @@ frontend/dist
 **/Thumbs.db
 
 # Project-only docs and tooling that should not enter the image
-.claude
-CLAUDE.md
 .codex
 docs
 

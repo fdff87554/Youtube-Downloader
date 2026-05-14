@@ -1,7 +1,3 @@
-# Claude Code (public repo - not pushed to remote)
-CLAUDE.md
-.claude/
-
 # Python
 .venv/
 __pycache__/
