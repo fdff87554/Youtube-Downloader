@@ -1,0 +1,21 @@
+config:
+  # Markdown in this repository includes long Claude prompts, tables, and
+  # generated command examples where hard wrapping would reduce readability.
+  MD013: false
+  # CLAUDE.md starts with template metadata comments before the first heading.
+  MD041: false
+  # Repeated section names are acceptable in changelog-style documents when
+  # they appear under different parent headings.
+  MD024:
+    siblings_only: true
+globs:
+  - "**/*.md"
+  - ".claude/**/*.md"
+  - ".github/**/*.md"
+ignores:
+  - ".git"
+  - ".claude/worktrees/**"
+  - "**/node_modules/**"
+  - "**/.venv/**"
+  - "**/dist/**"
+  - "**/build/**"
