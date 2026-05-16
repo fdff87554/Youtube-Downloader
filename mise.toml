@@ -7,6 +7,8 @@ ruff = "latest"
 yamlfmt = "latest"
 shfmt = "latest"
 shellcheck = "latest"
+# pre-commit 驅動由 mise 管理；hook envs（.pre-commit-config.yaml rev pin）獨立
+pre-commit = "latest"
 
 [env]
 _.python.venv = { path = ".venv", create = true }
