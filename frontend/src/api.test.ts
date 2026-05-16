@@ -1,6 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   buildDownloadUrl,
+  FETCH_INFO_TIMEOUT_MS,
+  fetchInfo,
   formatDuration,
   formatFileSize,
   isPlaylistInfo,
@@ -83,5 +85,52 @@ describe("buildDownloadUrl", () => {
     );
     expect(url).toContain("fmt=mp3");
     expect(url).toContain("title=My+Video");
+  });
+});
+
+describe("fetchInfo timeout", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it("aborts and throws a timeout error after FETCH_INFO_TIMEOUT_MS", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      (_url, init) =>
+        new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => {
+            reject(new DOMException("aborted", "AbortError"));
+          });
+        }),
+    );
+
+    const promise = fetchInfo("https://www.youtube.com/watch?v=x");
+    void vi.advanceTimersByTimeAsync(FETCH_INFO_TIMEOUT_MS);
+
+    await expect(promise).rejects.toThrow(/timed out/i);
+  });
+
+  it("resolves and clears the timer on a successful response", async () => {
+    const sampleBody = {
+      video_id: "x",
+      title: "T",
+      thumbnail: "",
+      duration: 0,
+      uploader: "",
+      formats: [],
+    };
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify(sampleBody), { status: 200 }),
+    );
+    const clearSpy = vi.spyOn(globalThis, "clearTimeout");
+
+    const result = await fetchInfo("https://www.youtube.com/watch?v=x");
+
+    expect(result).toMatchObject({ video_id: "x" });
+    expect(clearSpy).toHaveBeenCalled();
   });
 });
