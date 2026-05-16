@@ -37,8 +37,8 @@ Backend：
 
 - `cd backend && pytest -v`：執行測試
 - `DEBUG=true uvicorn --factory app.main:create_app --port 8000`：啟動開發伺服器
-- `uv pip install -r backend/requirements-dev.lock && uv pip install -e backend --no-deps`：安裝依賴
-- `uv pip compile backend/pyproject.toml -o backend/requirements.lock`：重生 runtime lockfile（dev lockfile 加 `--extra dev`）
+- `pip install -r backend/requirements-dev.lock && pip install -e backend --no-deps`：安裝依賴
+- `pip-compile backend/pyproject.toml -o backend/requirements.lock`：重生 runtime lockfile（dev lockfile 加 `--extra dev`）；首次須先 `pip install pip-tools`
 
 Frontend：
 

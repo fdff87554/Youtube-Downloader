@@ -117,9 +117,9 @@ cd backend && pytest -v
 To regenerate the lockfiles after editing `backend/pyproject.toml`:
 
 ```bash
-pip install uv
-uv pip compile backend/pyproject.toml -o backend/requirements.lock
-uv pip compile backend/pyproject.toml --extra dev -o backend/requirements-dev.lock
+pip install pip-tools
+pip-compile backend/pyproject.toml -o backend/requirements.lock
+pip-compile backend/pyproject.toml --extra dev -o backend/requirements-dev.lock
 ```
 
 ### Frontend
