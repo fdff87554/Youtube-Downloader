@@ -7,6 +7,8 @@ ruff = "latest"
 yamlfmt = "latest"
 shfmt = "latest"
 shellcheck = "latest"
+# uv 用於 lockfile 重生（uv pip compile）與依賴安裝
+uv = "latest"
 
 [env]
 _.python.venv = { path = ".venv", create = true }
