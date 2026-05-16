@@ -35,7 +35,7 @@ export function createUrlInput(onSubmit: (url: string) => void): HTMLElement {
         Get Info
       </button>
     </form>
-    <p id="url-error" role="alert" aria-live="polite"
+    <p id="url-error" role="status" aria-live="polite"
        class="mt-2 text-sm text-red-600 hidden"></p>
   `;
 
