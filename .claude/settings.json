@@ -15,7 +15,6 @@
       "Bash(git log)",
       "Bash(git log *)",
       "Bash(git branch)",
-      "Bash(git branch *)",
       "Bash(git show *)",
       "Bash(ls)",
       "Bash(ls *)",
