@@ -11,6 +11,7 @@ export function createUrlInput(onSubmit: (url: string) => void): HTMLElement {
 
   container.innerHTML = `
     <form id="url-form" class="flex gap-2">
+      <label for="url-input" class="sr-only">YouTube URL</label>
       <input
         id="url-input"
         type="url"
@@ -20,6 +21,8 @@ export function createUrlInput(onSubmit: (url: string) => void): HTMLElement {
                text-gray-800 bg-white"
         autocomplete="off"
         required
+        aria-describedby="url-error"
+        aria-invalid="false"
       />
       <button
         id="url-submit"
@@ -32,7 +35,8 @@ export function createUrlInput(onSubmit: (url: string) => void): HTMLElement {
         Get Info
       </button>
     </form>
-    <p id="url-error" class="mt-2 text-sm text-red-600 hidden"></p>
+    <p id="url-error" role="alert" aria-live="polite"
+       class="mt-2 text-sm text-red-600 hidden"></p>
   `;
 
   const input = container.querySelector<HTMLInputElement>("#url-input")!;
@@ -44,12 +48,15 @@ export function createUrlInput(onSubmit: (url: string) => void): HTMLElement {
     const value = input.value.trim();
     const isValid = YOUTUBE_URL_REGEX.test(value);
     button.disabled = !isValid;
-    if (value && !isValid) {
+    const showError = Boolean(value) && !isValid;
+    if (showError) {
       errorEl.textContent = "Please enter a valid YouTube URL.";
       errorEl.classList.remove("hidden");
     } else {
+      errorEl.textContent = "";
       errorEl.classList.add("hidden");
     }
+    input.setAttribute("aria-invalid", showError ? "true" : "false");
   });
 
   form.addEventListener("submit", (e) => {
