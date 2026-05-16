@@ -184,6 +184,7 @@ Frontend：
 - **外部 binary 依賴**：yt-dlp、ffmpeg、Deno 由 Docker image 提供；本地開發需自備（mise 不涵蓋）
 - **API contract**：`/api/info`、`/api/download`；nginx 反向代理 `/api/*` 至 uvicorn
 - **環境變數**：`ALLOWED_ORIGINS`（CORS allow-list，部署時必填）、`DEBUG`、`PORT`（compose）
+- **Manager 模式選用前置**：`.claude/agents/manager.md` 的 frontmatter 參照 `claude-md-reviewer`、`writing-quality-checker` agents 與 `Skill(codex-delegate)`，本 repo 未隨附；若使用 `claude --agent manager` 並需要這些工具，再從 dev-guidelines 複製對應檔案或安裝 codex CLI
 
 ## Formatter & Linter
 
