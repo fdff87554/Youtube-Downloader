@@ -103,8 +103,9 @@ Install [mise](https://mise.jdx.dev/) and let it set up the toolchain:
 mise install
 ```
 
-This provides Python 3.12, Node 22, and the formatters/linters used by the
-project (`ruff`, `yamlfmt`, `shfmt`, `shellcheck`).
+This provides Python 3.12, Node 22, `pre-commit`, and the
+formatters/linters used by the project (`ruff`, `yamlfmt`, `shfmt`,
+`shellcheck`).
 
 ### Backend
 
@@ -117,9 +118,9 @@ cd backend && pytest -v
 To regenerate the lockfiles after editing `backend/pyproject.toml`:
 
 ```bash
-pip install uv
-uv pip compile backend/pyproject.toml -o backend/requirements.lock
-uv pip compile backend/pyproject.toml --extra dev -o backend/requirements-dev.lock
+pip install pip-tools
+pip-compile backend/pyproject.toml -o backend/requirements.lock
+pip-compile backend/pyproject.toml --extra dev -o backend/requirements-dev.lock
 ```
 
 ### Frontend
