@@ -180,6 +180,8 @@ Frontend：
 ## 專案特殊規範
 
 - **Stateless / No disk I/O**：媒體流不落地，從 yt-dlp 直接 pipe 至 HTTP response；嚴禁引入 disk-based cache 或 staging
+  - **stateless ≠ serverless**：server-side 為必要設計（yt-dlp 是 Python 應用、YouTube CORS 鎖死直接 browser streaming、ffmpeg 需 native binary 才有合理效能）；目標是「self-hosted 但 server 不留任何使用者狀態」，不是「沒有 server」
+  - 前端為 thin API client：不在 browser 端執行 yt-dlp / ffmpeg，只呼叫 `/api/info` 與 `/api/download`，由瀏覽器接收 streaming response 觸發 native download dialog
 - **No DB / No session**：rate limiting 由 slowapi in-process 計數；不新增持久化儲存
 - **外部 binary 依賴**：yt-dlp、ffmpeg、Deno 由 Docker image 提供；本地開發需自備（mise 不涵蓋）
 - **API contract**：`/api/info`、`/api/download`；nginx 反向代理 `/api/*` 至 uvicorn

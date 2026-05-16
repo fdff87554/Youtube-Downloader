@@ -50,7 +50,8 @@ function render(): void {
       <h1 class="text-3xl font-bold text-gray-900 mb-2">YouTube Downloader</h1>
       <p class="text-gray-500 mb-8">Privacy-first video downloader</p>
       <div id="url-section" class="w-full flex justify-center"></div>
-      <div id="error-section" class="w-full flex justify-center mt-4"></div>
+      <div id="error-section" role="status" aria-live="polite"
+           class="w-full flex justify-center mt-4"></div>
       <div id="info-section" class="w-full flex justify-center mt-4"></div>
       <div id="format-section" class="w-full flex justify-center mt-4"></div>
       <div id="download-section" class="w-full flex justify-center mt-4"></div>
@@ -125,7 +126,7 @@ function renderVideoFlow(opts: VideoFlowOptions): void {
     createDownloadButton(() => {
       const sel = selection.get();
       const downloadUrl = buildDownloadUrl(url, sel.fmt, sel.quality, info.title);
-      window.open(downloadUrl, "_blank");
+      window.open(downloadUrl, "_blank", "noopener,noreferrer");
     }),
   );
 }
