@@ -4,6 +4,9 @@
 
 const API_BASE = "/api";
 
+// Aligned with backend SOCKET_TIMEOUT in app/services/youtube.py.
+export const FETCH_INFO_TIMEOUT_MS = 30_000;
+
 export interface VideoFormat {
   format_id: string;
   ext: string;
@@ -63,10 +66,27 @@ async function handleResponse<T>(response: Response): Promise<T> {
 }
 
 export async function fetchInfo(url: string): Promise<InfoResponse> {
-  const response = await fetch(
-    `${API_BASE}/info?${new URLSearchParams({ url })}`,
+  const controller = new AbortController();
+  const timeoutId = setTimeout(
+    () => controller.abort(),
+    FETCH_INFO_TIMEOUT_MS,
   );
-  return handleResponse<InfoResponse>(response);
+  try {
+    const response = await fetch(
+      `${API_BASE}/info?${new URLSearchParams({ url })}`,
+      { signal: controller.signal },
+    );
+    return await handleResponse<InfoResponse>(response);
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new Error(
+        `Request timed out after ${FETCH_INFO_TIMEOUT_MS / 1000}s. Please try again.`,
+      );
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 export function buildDownloadUrl(
