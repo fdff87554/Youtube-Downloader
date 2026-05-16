@@ -125,7 +125,7 @@ function renderVideoFlow(opts: VideoFlowOptions): void {
     createDownloadButton(() => {
       const sel = selection.get();
       const downloadUrl = buildDownloadUrl(url, sel.fmt, sel.quality, info.title);
-      window.open(downloadUrl, "_blank");
+      window.open(downloadUrl, "_blank", "noopener,noreferrer");
     }),
   );
 }
