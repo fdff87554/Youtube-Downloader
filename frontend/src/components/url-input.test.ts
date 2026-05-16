@@ -13,7 +13,7 @@ describe("createUrlInput accessibility", () => {
     expect(input).not.toBeNull();
     expect(input!.getAttribute("aria-describedby")).toBe("url-error");
     expect(errorEl).not.toBeNull();
-    expect(errorEl!.getAttribute("role")).toBe("alert");
+    expect(errorEl!.getAttribute("role")).toBe("status");
     expect(errorEl!.getAttribute("aria-live")).toBe("polite");
   });
 
