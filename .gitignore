@@ -33,3 +33,6 @@ Thumbs.db
 # Project output
 downloads/
 output/
+
+# Codex CLI sentinel file (optional external executor, see planner-executor rules)
+.codex
