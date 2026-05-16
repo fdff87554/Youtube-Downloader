@@ -78,7 +78,7 @@ export async function fetchInfo(url: string): Promise<InfoResponse> {
     );
     return await handleResponse<InfoResponse>(response);
   } catch (err) {
-    if (err instanceof DOMException && err.name === "AbortError") {
+    if (err instanceof Error && err.name === "AbortError") {
       throw new Error(
         `Request timed out after ${FETCH_INFO_TIMEOUT_MS / 1000}s. Please try again.`,
       );
