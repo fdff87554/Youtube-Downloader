@@ -57,7 +57,7 @@ export function createPlaylistView(
       const sel = getSelection();
       const videoUrl = `https://www.youtube.com/watch?v=${entry.video_id}`;
       const url = buildDownloadUrl(videoUrl, sel.fmt, sel.quality, entry.title);
-      window.open(url, "_blank");
+      window.open(url, "_blank", "noopener,noreferrer");
     });
 
     item.appendChild(thumb);
