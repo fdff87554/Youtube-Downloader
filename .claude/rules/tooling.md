@@ -7,8 +7,6 @@ paths:
   - "**/pyproject.toml"
   - "**/package.json"
   - "**/package-lock.json"
-  - "**/go.mod"
-  - "**/Cargo.toml"
   - "**/.python-version"
   - "**/.node-version"
 ---

@@ -6,8 +6,6 @@ paths:
   - "**/__tests__/**"
   - "**/*.test.{ts,tsx,js,jsx,mjs,cjs}"
   - "**/*.spec.{ts,tsx,js,jsx,mjs,cjs}"
-  - "**/*_test.go"
-  - "**/*_test.rs"
 ---
 
 # 測試策略完整規範
