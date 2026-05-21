@@ -4,7 +4,7 @@
 FROM denoland/deno:bin-2.7.14 AS deno-bin
 
 # Stage 1: Build frontend
-FROM node:26.1.0-alpine AS frontend-build
+FROM node:26.2.0-alpine AS frontend-build
 WORKDIR /build
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
