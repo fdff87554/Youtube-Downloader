@@ -14,7 +14,7 @@ dependencies = [
     # starlette<0.51, structurally below the fix). Cap below 0.137 so
     # dependabot surfaces further bumps as PRs rather than letting CI float.
     "fastapi>=0.121.0,<0.137",
-    "uvicorn[standard]>=0.30.0,<0.50",
+    "uvicorn[standard]>=0.30.0,<0.53",
     "yt-dlp==2026.3.17",
     "slowapi>=0.1.9,<0.2",
 ]
